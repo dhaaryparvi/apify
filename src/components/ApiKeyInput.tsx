@@ -9,23 +9,21 @@ interface ApiKeyInputProps {
 
 const ApiKeyInput: React.FC<ApiKeyInputProps> = ({ apiKey, setApiKey, fetchActors, loading }) => {
   return (
-    <div className="space-y-4">
-      <label htmlFor="apiKey" className="block text-lg font-medium text-gray-700">
-        Apify API Key
-      </label>
-      <div className="flex items-center space-x-2">
+    <div className="bg-gray-50 p-6 rounded-lg border border-gray-200 shadow-inner">
+      <h3 className="text-2xl font-bold text-gray-800 mb-4">Apify API Key</h3>
+      <div className="flex flex-col sm:flex-row gap-4 items-center">
         <input
-          id="apiKey"
           type="password"
+          id="apiKeyInput"
+          placeholder="Enter your Apify API Key"
           value={apiKey}
           onChange={(e) => setApiKey(e.target.value)}
-          className="flex-grow rounded-md border border-gray-300 p-3 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition duration-150"
-          placeholder="Enter your Apify API token"
+          className="flex-grow w-full sm:w-auto p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
         />
         <button
           onClick={fetchActors}
           disabled={loading || !apiKey}
-          className="rounded-md bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 transition duration-150"
+          className="w-full sm:w-auto px-6 py-3 font-semibold text-white bg-blue-600 rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-transform duration-200 active:scale-95 disabled:bg-gray-400 disabled:cursor-not-allowed"
         >
           {loading ? 'Authenticating...' : 'Authenticate & Fetch Actors'}
         </button>

@@ -8,6 +8,7 @@ import StatusDisplay from './components/StatusDisplay';
 interface ApifyActor {
   id: string;
   name?: string;
+  title?: string;
   defaultRunOptions?: any;
 }
 
@@ -26,6 +27,7 @@ interface ApifyActorSchema {
   properties?: { [key: string]: SchemaProperty };
 }
 
+// Main App component
 const App: React.FC = () => {
   const [apiKey, setApiKey] = useState<string>('');
   const [actors, setActors] = useState<ApifyActor[]>([]);
@@ -55,8 +57,6 @@ const App: React.FC = () => {
     try {
       const response = await fetch(`https://api.apify.com/v2/acts?token=${apiKey}&limit=1000`);
       const data = await response.json();
-      
-      console.log('API Response for fetching actors:', data); // Log the full response
 
       if (data.error) {
         throw new Error(data.error.message || 'Error fetching actors.');
@@ -89,29 +89,43 @@ const App: React.FC = () => {
     setRunResult(null);
 
     try {
-      // CORRECTED URL: Now using /v2/acts endpoint
-      const response = await fetch(`https://api.apify.com/v2/acts/${selectedActorId}?token=${apiKey}`);
+      // Use the specific actor's input schema endpoint for a more reliable response
+      const response = await fetch(`https://api.apify.com/v2/actors/${selectedActorId}/input-schema?token=${apiKey}`);
+      
+      // Check for a 404 response gracefully
+      if (!response.ok) {
+        setStatusMessage('This actor does not have a public input schema or its schema is empty.');
+        setActorSchema(null);
+        return;
+      }
+      
       const data = await response.json();
       
-      console.log('API Response for fetching schema:', data); // Log the full response
-
       if (data.error) {
         throw new Error(data.error.message || 'Error fetching actor schema.');
       }
 
-      const schema = data.data.inputSchema;
-      setActorSchema(schema);
+      // Check for an empty schema, which the API might return if none is defined
+      if (Object.keys(data).length === 0) {
+        setActorSchema(null);
+        setFormData({});
+        setStatusMessage('Input schema is empty or not defined for this actor.');
+      } else {
+        const schema: ApifyActorSchema = data;
+        setActorSchema(schema);
 
-      const initialFormData: { [key: string]: any } = {};
-      if (schema && schema.properties) {
-        Object.keys(schema.properties).forEach(key => {
-          const property = schema.properties![key];
-          initialFormData[key] = property.default !== undefined ? property.default : '';
-        });
+        const initialFormData: { [key: string]: any } = {};
+        if (schema && schema.properties) {
+          Object.keys(schema.properties).forEach(key => {
+            const property = schema.properties![key];
+            initialFormData[key] = property.default !== undefined ? property.default : '';
+          });
+        }
+        setFormData(initialFormData);
+
+        setStatusMessage('Input schema loaded.');
       }
-      setFormData(initialFormData);
 
-      setStatusMessage('Input schema loaded.');
     } catch (err: any) {
       console.error('API Error in fetchActorSchema:', err);
       setError(`Failed to fetch actor schema: ${err.message}`);
@@ -139,8 +153,6 @@ const App: React.FC = () => {
         body: JSON.stringify(formData),
       });
       const runData = await runResponse.json();
-      
-      console.log('API Response for running actor:', runData); // Log the full response
 
       if (runData.error) {
         throw new Error(runData.error.message || 'Error starting actor run.');
@@ -202,6 +214,8 @@ const App: React.FC = () => {
     }
   }, [selectedActorId, fetchActorSchema]);
 
+  const showForm = actorSchema && actorSchema.properties && Object.keys(actorSchema.properties).length > 0;
+
   return (
     <div className="min-h-screen bg-gray-100 p-8 font-sans">
       <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-2xl p-8 space-y-8 border border-gray-200">
@@ -225,17 +239,38 @@ const App: React.FC = () => {
               setSelectedActorId={setSelectedActorId}
             />
 
-            {actorSchema && (
-              <div className="bg-gray-50 p-6 rounded-lg border border-gray-200 shadow-inner">
+            <div className="bg-gray-50 p-6 rounded-lg border border-gray-200 shadow-inner">
+              <h3 className="text-2xl font-bold text-gray-800 mb-4">Actor Input Form</h3>
+              
+              {showForm ? (
                 <DynamicForm
-                  actorSchema={actorSchema}
+                  actorSchema={actorSchema!}
                   formData={formData}
                   handleFormChange={handleFormChange}
                   runActor={runActor}
                   loading={loading}
                 />
-              </div>
-            )}
+              ) : (
+                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-md">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <svg className="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path
+                          fillRule="evenodd"
+                          d="M8.257 3.099c.765-1.393 2.684-1.393 3.449 0l1.293 2.352c.692 1.26.115 2.76-.707 3.449l-1.293 1.293c-.765.765-2.001.765-2.766 0L5.757 8.9c-.822-.689-1.4-2.189-.707-3.449L8.257 3.099zM10 13a1 1 0 100 2 1 1 0 000-2zm-1-3a1 1 0 102 0 1 1 0 00-2 0z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm text-yellow-700">
+                        This actor has no input schema or its schema is empty. No form fields to display.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </>
         )}
 
